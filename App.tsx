@@ -2,8 +2,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Criterion, Alternative, RankingResult, DecisionState, DistributionType, UserProfile } from './types';
 import { INITIAL_CRITERIA, INITIAL_ALTERNATIVES } from './constants';
-import { calculateRankings } from './utils/mcdm';
+import { calculateRankings, buildSimplexObjective } from './utils/mcdm';
 import CriteriaControl from './components/CriteriaControl';
+import AlternativeManager from './components/AlternativeManager';
 import RankingTable from './components/RankingTable';
 import Visualizations from './components/Visualizations';
 import MonteCarloComparison from './components/MonteCarloComparison';
@@ -16,7 +17,7 @@ import UncertaintySettings from './components/UncertaintySettings';
 
 const App: React.FC = () => {
   const [criteria, setCriteria] = useState<Criterion[]>(INITIAL_CRITERIA);
-  const [alternatives] = useState<Alternative[]>(INITIAL_ALTERNATIVES);
+  const [alternatives, setAlternatives] = useState<Alternative[]>(INITIAL_ALTERNATIVES);
   const [firstAlternativeId, setFirstAlternativeId] = useState<string>(INITIAL_ALTERNATIVES[0]?.id ?? '');
   const [secondAlternativeId, setSecondAlternativeId] = useState<string>(INITIAL_ALTERNATIVES[1]?.id ?? INITIAL_ALTERNATIVES[0]?.id ?? '');
   const [simulationCount, setSimulationCount] = useState<number>(1000);
@@ -50,6 +51,11 @@ const App: React.FC = () => {
     Object.fromEntries(INITIAL_CRITERIA.map(c => [c.id, { min: -0.1, max: 0.1 }]))
   );
 
+  const activeCriteria = useMemo(
+    () => criteria.filter((criterion) => criterion.active !== false),
+    [criteria]
+  );
+
   const handleProfileUpdate = (profileId: string, updatedWeights: Record<string, number>) => {
     setTeamProfiles((current) => current.map((profile) =>
       profile.id === profileId ? { ...profile, weights: updatedWeights } : profile
@@ -61,7 +67,12 @@ const App: React.FC = () => {
   }, [isDarkMode]);
 
   // Memoized results to prevent unnecessary calculations
-  const results = useMemo(() => calculateRankings(criteria, alternatives), [criteria, alternatives]);
+  const results = useMemo(() => calculateRankings(activeCriteria, alternatives), [activeCriteria, alternatives]);
+
+  const simplexObjective = useMemo(
+    () => buildSimplexObjective(activeCriteria),
+    [activeCriteria]
+  );
 
   const decisionState: DecisionState = {
     criteria,
@@ -143,8 +154,39 @@ const App: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-8">
+            <AlternativeManager
+              criteria={activeCriteria}
+              alternatives={alternatives}
+              onChange={setAlternatives}
+            />
+
+            <section className="grid gap-6 xl:grid-cols-[1.6fr_0.9fr]">
+              <div className="rounded-[32px] border border-app-border bg-app-surface p-6 shadow-sm">
+                <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-[0.3em]">Simplex Amaç Fonksiyonu</p>
+                <h2 className="mt-3 text-xl font-bold text-app-text">Optimizasyon Modeli</h2>
+                <p className="mt-4 text-sm leading-7 text-app-text">Bu karar modeli, aktif kriterlerin ağırlıklı toplamını lineer olarak optimize eden bir Simplex amaç fonksiyonuna dayanır.</p>
+                <div className="mt-5 rounded-3xl bg-app-bg/70 p-4 border border-app-border">
+                  <p className="text-sm text-app-text">{simplexObjective}</p>
+                </div>
+              </div>
+
+              <div className="rounded-[32px] border border-app-border bg-app-surface p-6 shadow-sm">
+                <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-[0.3em]">Model Durumu</p>
+                <div className="mt-4 grid gap-4">
+                  <div className="rounded-3xl bg-app-surface-soft p-4">
+                    <p className="text-xs uppercase tracking-[0.25em] text-app-muted">Aktif Kriter</p>
+                    <p className="mt-2 text-3xl font-bold text-indigo-600">{activeCriteria.length}</p>
+                  </div>
+                  <div className="rounded-3xl bg-app-surface-soft p-4">
+                    <p className="text-xs uppercase tracking-[0.25em] text-app-muted">Alternatif</p>
+                    <p className="mt-2 text-3xl font-bold text-teal-600">{alternatives.length}</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <MonteCarloComparison
-              criteria={criteria}
+              criteria={activeCriteria}
               alternatives={alternatives}
               firstAlternativeId={firstAlternativeId}
               secondAlternativeId={secondAlternativeId}
@@ -157,7 +199,7 @@ const App: React.FC = () => {
             />
 
             <AIExplanationPanel
-              criteria={criteria}
+              criteria={activeCriteria}
               alternatives={alternatives}
               results={results}
             />
@@ -180,7 +222,7 @@ const App: React.FC = () => {
               onProfileUpdate={handleProfileUpdate}
             />
 
-            <Visualizations state={decisionState} />
+            <Visualizations state={{ ...decisionState, criteria: activeCriteria }} />
 
             <div className="grid grid-cols-1 gap-8 xl:grid-cols-[1.8fr_1fr]">
               <div className="space-y-6">
@@ -202,6 +244,10 @@ const App: React.FC = () => {
                             </p>
                         </div>
                     </div>
+                    <div className="mt-4 rounded-3xl bg-app-bg/80 p-4 border border-app-border">
+                      <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-[0.3em]">Simplex Optimize Edilen Amaç Fonksiyonu</p>
+                      <p className="mt-2 text-sm text-app-text">{simplexObjective}</p>
+                    </div>
                  </div>
               </div>
             </div>
@@ -211,7 +257,7 @@ const App: React.FC = () => {
           <div role="note" className="flex items-start gap-4 p-4 bg-blue-50 text-blue-800 rounded-3xl border border-blue-100 text-sm shadow-sm">
             <i className="fa-solid fa-circle-info text-lg mt-1"></i>
             <p>
-              <strong>İpucu:</strong> Ağırlıkları değiştirdikçe sıralama anlık olarak güncellenir. En yüksek toplam skorlu alternatif, belirlediğiniz önceliklere göre "Matematiksel Olarak En İdeal" seçimdir.
+              <strong>İpucu:</strong> Ağırlıkları değiştirdikçe sıralama anlık olarak güncellenir. Modelimiz lineer optimizasyon temelli bir başarı endeksi çıkarır ve tercihlerinizi amaç matrisine göre değerlendirir.
             </p>
           </div>
         </section>
@@ -222,7 +268,7 @@ const App: React.FC = () => {
         <div className="flex flex-wrap items-center gap-4">
           <span className="flex items-center gap-1">
             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-            Motor: Weighted Sum Model v1.2
+            Motor: Lineer Optimizasyon &amp; Amaç Matrisi
           </span>
           <span>•</span>
           <span>Dil: Türkçe (TR)</span>

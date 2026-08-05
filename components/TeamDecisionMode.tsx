@@ -15,14 +15,15 @@ interface Props {
 
 const TeamDecisionMode: React.FC<Props> = ({ criteria, alternatives, profiles, activeProfileId, onProfileChange, onProfileUpdate }) => {
   const activeProfile = profiles.find((profile) => profile.id === activeProfileId) ?? profiles[0];
+  const activeCriteria = criteria.filter((criterion) => criterion.active !== false);
   const consensus = useMemo(() => buildTeamConsensus(criteria, alternatives, profiles), [criteria, alternatives, profiles]);
 
   const profileCriteria = useMemo(
-    () => criteria.map((criterion) => ({
+    () => activeCriteria.map((criterion) => ({
       ...criterion,
       weight: activeProfile.weights[criterion.id] ?? 0,
     })),
-    [criteria, activeProfile]
+    [activeCriteria, activeProfile]
   );
 
   const handleProfileWeightChange = (updated: Criterion[]) => {
@@ -119,7 +120,7 @@ const TeamDecisionMode: React.FC<Props> = ({ criteria, alternatives, profiles, a
             <h3 className="text-sm font-bold text-app-text mb-4 uppercase tracking-[0.25em]">Ağırlık Dağılımı</h3>
             <div className="h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={criteria.map((criterion) => ({
+                <RadarChart data={activeCriteria.map((criterion) => ({
                   subject: criterion.name,
                   ...profiles.reduce((acc, profile) => ({
                     ...acc,

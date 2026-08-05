@@ -1,11 +1,13 @@
 
 export interface Criterion {
   id: string;
+  parentId?: string;
   name: string;
   weight: number; // 0 to 1
   isBenefit: boolean; // true for 'higher is better', false for 'lower is better'
   unit: string;
   description: string;
+  active?: boolean;
 }
 
 export interface Alternative {

@@ -22,9 +22,19 @@ interface Props {
 }
 
 const ParetoVisualization: React.FC<Props> = ({ criteria, alternatives }) => {
-  const [xCriterionId, setXCriterionId] = useState<string>(criteria[0]?.id ?? '');
-  const [yCriterionId, setYCriterionId] = useState<string>(criteria[1]?.id ?? criteria[0]?.id ?? '');
+  const activeCriteria = criteria.filter((criterion) => criterion.active !== false);
+  const [xCriterionId, setXCriterionId] = useState<string>(activeCriteria[0]?.id ?? '');
+  const [yCriterionId, setYCriterionId] = useState<string>(activeCriteria[1]?.id ?? activeCriteria[0]?.id ?? '');
   const [selectedAlternative, setSelectedAlternative] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!activeCriteria.find((criterion) => criterion.id === xCriterionId)) {
+      setXCriterionId(activeCriteria[0]?.id ?? '');
+    }
+    if (!activeCriteria.find((criterion) => criterion.id === yCriterionId)) {
+      setYCriterionId(activeCriteria[1]?.id ?? activeCriteria[0]?.id ?? '');
+    }
+  }, [activeCriteria, xCriterionId, yCriterionId]);
 
   const paretoData = useMemo(
     () => computeParetoFront(criteria, alternatives, xCriterionId, yCriterionId),
@@ -51,7 +61,7 @@ const ParetoVisualization: React.FC<Props> = ({ criteria, alternatives }) => {
               onChange={(event) => setXCriterionId(event.target.value)}
               className="mt-2 w-full rounded-2xl border border-app-border bg-app-bg px-4 py-3 text-sm text-app-text outline-none focus:border-indigo-500"
             >
-              {criteria.map((criterion) => (
+              {activeCriteria.map((criterion) => (
                 <option key={criterion.id} value={criterion.id}>{criterion.name}</option>
               ))}
             </select>
@@ -63,7 +73,7 @@ const ParetoVisualization: React.FC<Props> = ({ criteria, alternatives }) => {
               onChange={(event) => setYCriterionId(event.target.value)}
               className="mt-2 w-full rounded-2xl border border-app-border bg-app-bg px-4 py-3 text-sm text-app-text outline-none focus:border-teal-500"
             >
-              {criteria.map((criterion) => (
+              {activeCriteria.map((criterion) => (
                 <option key={criterion.id} value={criterion.id}>{criterion.name}</option>
               ))}
             </select>

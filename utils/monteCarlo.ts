@@ -53,8 +53,16 @@ export const simulateMonteCarlo = (
     .map((id) => alternatives.find((alt) => alt.id === id))
     .filter((alt): alt is Alternative => typeof alt !== 'undefined');
 
+  if (selected.length < 2 || iterations <= 0 || histogramBins <= 0) {
+    return {
+      items: [],
+      histogram: [],
+      winProbability: {},
+    };
+  }
+
   const bounds = criteria.reduce<Record<string, { min: number; max: number }>>((acc, criterion) => {
-    const values = alternatives.map((alt) => alt.scores[criterion.id]);
+    const values = alternatives.map((alt) => alt.scores[criterion.id] ?? 0);
     acc[criterion.id] = {
       min: Math.min(...values),
       max: Math.max(...values),
@@ -92,11 +100,20 @@ export const simulateMonteCarlo = (
   });
 
   const allValues = series.flatMap((item) => item.values);
+  if (allValues.length === 0) {
+    return {
+      items: series,
+      histogram: [],
+      winProbability: {},
+    };
+  }
+
   const globalMin = Math.min(...allValues);
   const globalMax = Math.max(...allValues);
   const bins = createBins(globalMin, globalMax, histogramBins);
 
   bins.forEach((bin) => {
+    bin.counts = bin.counts ?? {};
     series.forEach((item) => {
       bin.counts[item.alternativeId] = 0;
     });
@@ -104,11 +121,12 @@ export const simulateMonteCarlo = (
 
   series.forEach((item) => {
     item.values.forEach((value) => {
-      const binIndex = Math.min(
-        histogramBins - 1,
-        Math.floor(((value - globalMin) / (globalMax - globalMin || 1)) * histogramBins)
-      );
-      bins[binIndex].counts[item.alternativeId] += 1;
+      const rawIndex = Math.floor(((value - globalMin) / (globalMax - globalMin || 1)) * histogramBins);
+      const binIndex = Math.max(0, Math.min(histogramBins - 1, rawIndex));
+      const bin = bins[binIndex];
+      if (!bin) return;
+      bin.counts = bin.counts ?? {};
+      bin.counts[item.alternativeId] = (bin.counts[item.alternativeId] ?? 0) + 1;
     });
   });
 

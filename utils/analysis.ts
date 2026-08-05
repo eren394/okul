@@ -1,6 +1,8 @@
 import { Alternative, Criterion, RankingResult, SensitivityResult, SensitivityImpact, ParetoPoint, UserProfile, TeamConsensus, ExplanationResult } from '../types';
 import { calculateRankings } from './mcdm';
 
+const getActiveCriteria = (criteria: Criterion[]) => criteria.filter((criterion) => criterion.active !== false);
+
 const normalizeWeights = (criteria: Criterion[]): Criterion[] => {
   const total = criteria.reduce((sum, item) => sum + item.weight, 0) || 1;
   return criteria.map((item) => ({ ...item, weight: item.weight / total }));
@@ -25,7 +27,8 @@ const adjustWeights = (criteria: Criterion[], criterionId: string, targetWeight:
 };
 
 const buildBaselineRankMap = (criteria: Criterion[], alternatives: Alternative[]) => {
-  const normalized = normalizeWeights(criteria);
+  const activeCriteria = getActiveCriteria(criteria);
+  const normalized = normalizeWeights(activeCriteria);
   const ranked = calculateRankings(normalized, alternatives);
   return new Map(ranked.map((result) => [result.alternativeId, result.rank]));
 };
@@ -69,12 +72,13 @@ const computeImpactForCriterion = (
 };
 
 export const analyzeSensitivity = (criteria: Criterion[], alternatives: Alternative[]): SensitivityResult => {
-  const normalizedCriteria = normalizeWeights(criteria);
+  const activeCriteria = getActiveCriteria(criteria);
+  const normalizedCriteria = normalizeWeights(activeCriteria);
   const baselineRanking = calculateRankings(normalizedCriteria, alternatives);
   const baselineWinner = baselineRanking[0]?.alternativeId ?? '';
   const baselineRankMap = new Map(baselineRanking.map((result) => [result.alternativeId, result.rank]));
 
-  const impacts = criteria.map((criterion) =>
+  const impacts = activeCriteria.map((criterion) =>
     computeImpactForCriterion(normalizedCriteria, alternatives, criterion.id, baselineWinner, baselineRankMap)
   );
 
@@ -98,8 +102,9 @@ export const computeParetoFront = (
   xCriterionId: string,
   yCriterionId: string
 ): ParetoPoint[] => {
-  const xCriterion = criteria.find((c) => c.id === xCriterionId);
-  const yCriterion = criteria.find((c) => c.id === yCriterionId);
+  const activeCriteria = getActiveCriteria(criteria);
+  const xCriterion = activeCriteria.find((c) => c.id === xCriterionId);
+  const yCriterion = activeCriteria.find((c) => c.id === yCriterionId);
   if (!xCriterion || !yCriterion) return [];
 
   const normalizeValue = (value: number, criterion: Criterion): number =>
@@ -132,7 +137,7 @@ export const computeParetoFront = (
 };
 
 const buildProfileCriteria = (criteria: Criterion[], weights: Record<string, number>): Criterion[] =>
-  criteria.map((criterion) => ({
+  getActiveCriteria(criteria).map((criterion) => ({
     ...criterion,
     weight: weights[criterion.id] ?? 0,
   }));
@@ -149,8 +154,9 @@ export const buildTeamConsensus = (
   alternatives: Alternative[],
   profiles: UserProfile[]
 ): TeamConsensus => {
+  const activeCriteria = getActiveCriteria(criteria);
   const profileRankings = profiles.map((profile) => {
-    const profileCriteria = normalizeWeights(buildProfileCriteria(criteria, normalizeProfileWeights(profile.weights)));
+    const profileCriteria = normalizeWeights(buildProfileCriteria(activeCriteria, normalizeProfileWeights(profile.weights)));
     return {
       profile,
       ranking: calculateRankings(profileCriteria, alternatives),
@@ -158,14 +164,14 @@ export const buildTeamConsensus = (
   });
 
   const consensusWeights = normalizeProfileWeights(
-    criteria.reduce((acc, criterion) => {
+    activeCriteria.reduce((acc, criterion) => {
       const average = profiles.reduce((sum, profile) => sum + (profile.weights[criterion.id] ?? 0), 0) / profiles.length;
       acc[criterion.id] = average;
       return acc;
     }, {} as Record<string, number>)
   );
 
-  const consensusCriteria = normalizeWeights(buildProfileCriteria(criteria, consensusWeights));
+  const consensusCriteria = normalizeWeights(buildProfileCriteria(activeCriteria, consensusWeights));
   const consensusRanking = calculateRankings(consensusCriteria, alternatives);
   const consensusWinner = consensusRanking[0]?.name ?? '';
 
@@ -209,12 +215,13 @@ export const buildExplanation = (
   alternatives: Alternative[],
   results: RankingResult[]
 ): ExplanationResult => {
+  const activeCriteria = getActiveCriteria(criteria);
   const winner = results[0];
   const runnerUp = results[1];
   const totalScoreGap = results.length > 1 ? Math.abs(winner.totalScore - runnerUp.totalScore) : winner.totalScore;
   const confidence = Math.min(98, Math.max(55, totalScoreGap * 100));
 
-  const contributions = criteria.map((criterion) => {
+  const contributions = activeCriteria.map((criterion) => {
     const raw = alternatives.find((alt) => alt.id === winner.alternativeId)?.scores[criterion.id] ?? 0;
     const normalized = criterion.isBenefit ? raw : (1 / (raw + 1));
     return {
@@ -228,7 +235,7 @@ export const buildExplanation = (
     .slice(0, 3)
     .map((item) => ({ name: item.name, contribution: parseFloat(item.contribution.toFixed(3)) }));
 
-  const negativeFactors = criteria
+  const negativeFactors = activeCriteria
     .filter((criterion) => !criterion.isBenefit)
     .sort((a, b) => b.weight - a.weight)
     .slice(0, 3)

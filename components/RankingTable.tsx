@@ -21,7 +21,7 @@ const RankingTable: React.FC<Props> = ({ results }) => {
           <tr className="text-xs uppercase text-app-muted font-bold border-b border-app-border">
             <th scope="col" className="px-6 py-4">Sıra</th>
             <th scope="col" className="px-6 py-4">Alternatif</th>
-            <th scope="col" className="px-6 py-4 text-right">Skor (0-1)</th>
+            <th scope="col" className="px-6 py-4 text-right">Başarı Endeksi</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-app-border">
@@ -58,7 +58,7 @@ const RankingTable: React.FC<Props> = ({ results }) => {
                 )}
               </td>
               <td className="px-6 py-4 text-right font-mono font-semibold text-indigo-600">
-                {res.totalScore.toFixed(4)}
+                {(res.totalScore * 100).toFixed(1)}%
               </td>
             </tr>
           ))}

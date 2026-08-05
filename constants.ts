@@ -9,12 +9,12 @@ export const ALTERNATIVE_DESCRIPTIONS: Record<string, string> = {
 };
 
 export const INITIAL_CRITERIA: Criterion[] = [
-  { id: 'c1', name: 'Maliyet (Cost)', weight: 0.25, isBenefit: false, unit: '$', description: 'Toplam operasyonel ve yatırım maliyeti' },
-  { id: 'c2', name: 'Kalite (Quality)', weight: 0.25, isBenefit: true, unit: '1-100', description: 'Hizmet veya ürünün kalite standartlarına uygunluğu' },
-  { id: 'c3', name: 'Sürdürülebilirlik', weight: 0.15, isBenefit: true, unit: 'ESG', description: 'Çevresel ve sosyal etki puanı' },
-  { id: 'c4', name: 'Zaman (Time)', weight: 0.15, isBenefit: false, unit: 'Gün', description: 'Proje tamamlanma süresi' },
-  { id: 'c5', name: 'Enerji Tüketimi', weight: 0.10, isBenefit: false, unit: 'kWh', description: 'Birim başına harcanan enerji' },
-  { id: 'c6', name: 'Esneklik', weight: 0.10, isBenefit: true, unit: '1-10', description: 'Değişen koşullara uyum sağlama yeteneği' },
+  { id: 'c1', name: 'Maliyet (Cost)', weight: 0.25, isBenefit: false, unit: '$', description: 'Toplam operasyonel ve yatırım maliyeti', active: true },
+  { id: 'c2', name: 'Kalite (Quality)', weight: 0.25, isBenefit: true, unit: '1-100', description: 'Hizmet veya ürünün kalite standartlarına uygunluğu', active: true },
+  { id: 'c3', name: 'Sürdürülebilirlik', weight: 0.15, isBenefit: true, unit: 'ESG', description: 'Çevresel ve sosyal etki puanı', active: true },
+  { id: 'c4', name: 'Zaman (Time)', weight: 0.15, isBenefit: false, unit: 'Gün', description: 'Proje tamamlanma süresi', active: true },
+  { id: 'c5', name: 'Enerji Tüketimi', weight: 0.10, isBenefit: false, unit: 'kWh', description: 'Birim başına harcanan enerji', active: true },
+  { id: 'c6', name: 'Esneklik', weight: 0.10, isBenefit: true, unit: '1-10', description: 'Değişen koşullara uyum sağlama yeteneği', active: true },
 ];
 
 export const INITIAL_ALTERNATIVES: Alternative[] = [
