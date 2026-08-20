@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Cell, LabelList } from 'recharts';
 import { Alternative, Criterion, UserProfile } from '../types';
 import { buildTeamConsensus } from '../utils/analysis';
 import CriteriaControl from './CriteriaControl';
@@ -36,6 +36,21 @@ const TeamDecisionMode: React.FC<Props> = ({ criteria, alternatives, profiles, a
       ...acc,
       [profile.name]: (profile.weights[criterion.id] ?? 0) * 100,
     }), {} as Record<string, number>),
+  }));
+
+  const profileAgreementData = profiles.map((profile) => {
+    const profileScores = profiles.map((other) => consensus.conflictMatrix[profile.id]?.[other.id] ?? 0);
+    const averageAgreement = profileScores.reduce((sum, value) => sum + value, 0) / Math.max(profileScores.length, 1);
+    return {
+      name: profile.name,
+      agreement: Math.round(averageAgreement),
+    };
+  });
+
+  const activeProfileWeightData = activeCriteria.map((criterion) => ({
+    name: criterion.name,
+    weight: Number((((activeProfile.weights[criterion.id] ?? 0) * 100)).toFixed(1)),
+    unit: criterion.unit,
   }));
 
   return (
@@ -76,32 +91,44 @@ const TeamDecisionMode: React.FC<Props> = ({ criteria, alternatives, profiles, a
           </div>
 
           <div className="rounded-3xl border border-app-border bg-app-surface p-5">
-            <h3 className="text-sm font-bold text-app-text mb-4 uppercase tracking-[0.25em]">Çatışma Isı Haritası</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm text-app-text">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-3 text-app-muted"></th>
-                    {profiles.map((profile) => (
-                      <th key={profile.id} className="px-4 py-3 text-app-muted">{profile.name}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {profiles.map((left) => (
-                    <tr key={left.id} className="border-t border-app-border">
-                      <td className="px-4 py-3 font-semibold text-app-text">{left.name}</td>
-                      {profiles.map((right) => (
-                        <td key={right.id} className="px-4 py-3">
-                          <div className="rounded-2xl bg-slate-950/80 p-3 text-right font-semibold" style={{ backgroundColor: `rgba(16, 185, 129, ${consensus.conflictMatrix[left.id]?.[right.id] ?? 0} / 100)` }}>
-                            {Math.round(consensus.conflictMatrix[left.id]?.[right.id] ?? 0)}%
-                          </div>
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <h3 className="text-sm font-bold text-app-text mb-4 uppercase tracking-[0.25em]">Ağırlık Sütun Grafiği</h3>
+            <div className="h-[240px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={activeProfileWeightData} layout="vertical" margin={{ top: 10, right: 12, left: 12, bottom: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
+                  <XAxis type="number" domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="name" width={120} tick={{ fill: '#cbd5e1', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    formatter={(value: number) => [`${value}%`, 'Ağırlık']}
+                    labelStyle={{ color: '#e2e8f0' }}
+                    contentStyle={{ background: '#0f172a', border: '1px solid rgba(148,163,184,0.25)', color: '#e2e8f0' }}
+                  />
+                  <Bar dataKey="weight" radius={[0, 10, 10, 0]} fill="#6366f1">
+                    <LabelList dataKey="weight" position="right" formatter={(value: number) => `${value}%`} fill="#e2e8f0" fontSize={10} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-app-border bg-app-surface p-5">
+            <h3 className="text-sm font-bold text-app-text mb-4 uppercase tracking-[0.25em]">Profiller Arası Uyum</h3>
+            <div className="h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={profileAgreementData} margin={{ top: 20, right: 12, bottom: 10, left: 12 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fill: '#cbd5e1', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                  <Tooltip
+                    formatter={(value: number) => [`${value}%`, 'Uyum']}
+                    labelStyle={{ color: '#e2e8f0' }}
+                    contentStyle={{ background: '#0f172a', border: '1px solid rgba(148,163,184,0.25)', color: '#e2e8f0' }}
+                  />
+                  <Bar dataKey="agreement" radius={[10, 10, 0, 0]} fill="#14b8a6">
+                    <LabelList dataKey="agreement" position="top" formatter={(value: number) => `${value}%`} fill="#e2e8f0" fontSize={10} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>

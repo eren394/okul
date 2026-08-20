@@ -77,6 +77,9 @@ const CriteriaControl: React.FC<Props> = ({ criteria, onChange }) => {
                     onChange={(event) => handleChange(criterion.id, { name: event.target.value })}
                     className="mt-2 w-full rounded-2xl border border-app-border bg-app-bg px-3 py-2 text-sm text-app-text outline-none focus:border-indigo-500"
                   />
+                  <div className="mt-2 inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-indigo-700">
+                    Birim: {criterion.unit || '—'}
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <button

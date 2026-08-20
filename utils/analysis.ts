@@ -8,6 +8,17 @@ const normalizeWeights = (criteria: Criterion[]): Criterion[] => {
   return criteria.map((item) => ({ ...item, weight: item.weight / total }));
 };
 
+const getUnitSensitivityFactor = (criterion: Criterion): number => {
+  const unit = criterion.unit.toLowerCase();
+  if (['$', 'usd', 'tl', 'eur', 'cost', 'gün', 'day', 'days', 'kwh', 'kw', 'w', 'mwh'].some((token) => unit.includes(token))) {
+    return 1.4;
+  }
+  if (['esg', 'score', 'puan', '1-100', '1-10', '%', 'rating'].some((token) => unit.includes(token))) {
+    return 1.15;
+  }
+  return 1.05;
+};
+
 const adjustWeights = (criteria: Criterion[], criterionId: string, targetWeight: number): Criterion[] => {
   const baseline = criteria.find((item) => item.id === criterionId);
   if (!baseline) return criteria;
@@ -57,17 +68,20 @@ const computeImpactForCriterion = (
 
   const impactScore = Math.max(...variations.map((item) => item.averageRankDelta)) * 100;
   const thresholdChange = variations.find((variant) => variant.winner !== baselineWinner);
+  const criterion = criteria.find((item) => item.id === criterionId);
+  const unitFactor = criterion ? getUnitSensitivityFactor(criterion) : 1;
 
   return {
     criterionId,
-    name: criteria.find((item) => item.id === criterionId)?.name ?? criterionId,
+    name: criterion?.name ?? criterionId,
+    unit: criterion?.unit,
     currentWeight: baselineWeight,
-    impactScore: parseFloat(impactScore.toFixed(1)),
+    impactScore: parseFloat((impactScore * unitFactor).toFixed(1)),
     thresholdToChangeLeader: thresholdChange ? thresholdChange.weight : null,
     nextLeader: thresholdChange ? thresholdChange.winner : undefined,
     note: thresholdChange
-      ? `${thresholdChange.weight * 100}% üstü değeriyle lider değişebilir.`
-      : 'Mevcut aralıkta lider değişmiyor.',
+      ? `${thresholdChange.weight * 100}% üstü değeriyle lider değişebilir. Birim etkisi (${criterion?.unit ?? '—'}) nedeniyle karar duyarlılığı arttı.`
+      : `Mevcut aralıkta lider değişmiyor. Birim etkisi (${criterion?.unit ?? '—'}) kararın güvenini artırıyor.`,
   };
 };
 
@@ -223,10 +237,12 @@ export const buildExplanation = (
 
   const contributions = activeCriteria.map((criterion) => {
     const raw = alternatives.find((alt) => alt.id === winner.alternativeId)?.scores[criterion.id] ?? 0;
+    const unitFactor = getUnitSensitivityFactor(criterion);
     const normalized = criterion.isBenefit ? raw : (1 / (raw + 1));
     return {
       name: criterion.name,
-      contribution: normalized * criterion.weight,
+      unit: criterion.unit,
+      contribution: normalized * criterion.weight * unitFactor,
     };
   });
 
@@ -245,7 +261,7 @@ export const buildExplanation = (
     }));
 
   const summary = `Alternatif ${winner.name} öne çıktı çünkü ${topCriteria
-    .map((item) => item.name)
+    .map((item) => `${item.name} (${item.unit ?? 'birim'} ile ölçülen etki)`)
     .join(', ')} gibi kriterlerde güçlü performans sergiledi. ${runnerUp ? `Alternatif ${runnerUp.name} ise ${runnerUp.totalScore < winner.totalScore ? 'daha düşük' : 'benzer'} toplam puan alarak ikinci sırada yer aldı.` : ''}`;
 
   return {

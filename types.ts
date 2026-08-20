@@ -49,6 +49,7 @@ export interface MonteCarloOutput {
 export interface SensitivityImpact {
   criterionId: string;
   name: string;
+  unit?: string;
   currentWeight: number;
   impactScore: number;
   thresholdToChangeLeader: number | null;
