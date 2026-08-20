@@ -114,7 +114,22 @@ const CriteriaControl: React.FC<Props> = ({ criteria, onChange }) => {
                       onChange={(event) => handleChange(criterion.id, { weight: Number(event.target.value) })}
                       className="w-full h-2 rounded-full accent-indigo-600"
                     />
-                    <span className="text-xs font-mono text-app-muted">%{Math.round(criterion.weight * 100)}</span>
+                    <label className="flex shrink-0 items-center gap-1 rounded-xl border border-app-border bg-app-bg px-2 py-1 text-xs font-mono text-app-muted">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={Number((criterion.weight * 100).toFixed(1))}
+                        onChange={(event) => {
+                          const value = Math.min(100, Math.max(0, Number(event.target.value) || 0));
+                          handleChange(criterion.id, { weight: value / 100 });
+                        }}
+                        className="w-14 bg-transparent text-right text-app-text outline-none"
+                        aria-label={`${criterion.name} ağırlık yüzdesi`}
+                      />
+                      <span>%</span>
+                    </label>
                   </div>
                 </div>
 

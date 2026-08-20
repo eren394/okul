@@ -141,6 +141,20 @@ const TeamDecisionMode: React.FC<Props> = ({ criteria, alternatives, profiles, a
               <p className="mt-4 text-4xl font-extrabold text-indigo-500">{Math.round(consensus.agreementScore)}%</p>
               <p className="mt-2 text-sm text-app-muted">Profiller arasındaki genel tutarlılık puanı</p>
             </div>
+            <div className="mt-4 rounded-3xl border border-app-border bg-app-surface p-4 text-sm text-app-muted">
+              <p className="font-semibold text-app-text">Profil sonucu nasıl etkiler?</p>
+              <p className="mt-2 leading-6">
+                Seçili profilin her kriter ağırlığı, o kriterin toplam karara katkısını belirler. Bir kriterin ağırlığı yükseldikçe o kriterdeki puan farkı sıralamayı daha güçlü etkiler; tüm profillerin ağırlık ortalaması da konsensüs sonucunu oluşturur.
+              </p>
+              <div className="mt-3 space-y-2">
+                {activeProfileWeightData.slice(0, 4).map((item) => (
+                  <div key={item.name} className="flex items-center justify-between gap-3 border-b border-app-border pb-2 last:border-0 last:pb-0">
+                    <span className="truncate text-app-text">{item.name}</span>
+                    <span className="shrink-0 font-semibold text-indigo-600">%{item.weight} · {item.unit || 'birim'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="rounded-3xl border border-app-border bg-app-surface p-5">

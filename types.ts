@@ -99,7 +99,7 @@ export interface ExplanationCard {
 export interface ExplanationResult {
   summary: string;
   confidence: number;
-  topCriteria: Array<{ name: string; contribution: number }>;
+  topCriteria: Array<{ name: string; unit?: string; contribution: number }>;
   negativeFactors: Array<{ name: string; effect: string }>;
   cards: ExplanationCard[];
 }
